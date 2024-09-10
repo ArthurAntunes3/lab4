@@ -16,19 +16,21 @@ func readFile(filePath string) ([]byte, error) {
 	return data, nil
 }
 
+type Result struct {
+	Soma int
+	Path string
+}
+
 // sum all bytes of a file
-func sum(filePath string) (int, error) {
-	data, err := readFile(filePath)
-	if err != nil {
-		return 0, err
-	}
+func sum(filePath string, somas chan Result){
+	data, _ := readFile(filePath)
 
 	_sum := 0
 	for _, b := range data {
 		_sum += int(b)
 	}
-
-	return _sum, nil
+	
+	somas <- Result{_sum, filePath}
 }
 
 // print the totalSum for all files and the files with equal sum
@@ -40,16 +42,18 @@ func main() {
 
 	var totalSum int64
 	sums := make(map[int][]string)
+	somas := make(chan Result)
 	for _, path := range os.Args[1:] {
-		_sum, err := sum(path)
+		go sum(path, somas)
+	}
+	
+	for i := 0; i < len(os.Args[1:]); i++ {
+		
+		soma := <- somas
 
-		if err != nil {
-			continue
-		}
+		totalSum += int64(soma.Soma)
 
-		totalSum += int64(_sum)
-
-		sums[_sum] = append(sums[_sum], path)
+		sums[soma.Soma] = append(sums[soma.Soma], soma.Path)
 	}
 
 	fmt.Println(totalSum)
